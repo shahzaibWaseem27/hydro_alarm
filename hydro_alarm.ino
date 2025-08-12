@@ -1,132 +1,86 @@
-#define LIGHT_PIN PB0  // Define the pin number for the LED
-#define BUTTON_PIN PB4 
-
-// Define states as simple integer constants
-#define OFF 0
-#define BLINKING 1
-#define ON 2
-
-class FSM {
-  public:
-
-  FSM(int initial_state, int button_pin) {
-
-    this->state = initial_state;
-    this->button_pin = button_pin;
-
-  }
-  
-  int get_state() {
-    return this->state;
-  }
-  
-  void set_state(int new_state) {
-    this->state = new_state;
-  }
-
-  void update(){
-
-    this->button_val = digitalRead(this->button_pin);
 
 
-    if(this->button_val){
-
-      switch(this->state){
-
-        case OFF:
-
-          set_state(BLINKING);
-
-        case BLINKING:
-
-          set_state(ON);
-
-        case ON:
-
-          set_state(OFF);
-
-      }
-
-    }
-
-
-    handle_outputs();
-
-
-  }
-
-
-  void handle_outputs(){
-
-    switch(this->state) {
-
-    case OFF:
-      
-      handle_off();
-
-      break;
-      
-    case BLINKING:
-      
-      handle_blinking();
-
-      break;
-      
-    case ON:
-      
-      handle_on();
-
-      break;
-
-    }
-
-  }
-
-  void handle_off(){
-
-    digitalWrite(LIGHT_PIN, LOW);
-
-  }
-
-  void handle_blinking(){
-
-    digitalWrite(LIGHT_PIN, HIGH);
-    delay(1000);
-    digitalWrite(LIGHT_PIN, LOW);
-    delay(1000);
-
-  }
-
-  void handle_on(){
-
-    digitalWrite(LIGHT_PIN, HIGH);
-
-  }
-  
-  private:
-
-  int state;
-  int button_pin;
-  int button_val;
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
 
-};
+#include "classes.h"
 
-FSM fsm(OFF, BUTTON_PIN);
 
-void setup() {
+#define ALARM_SET_BUTTON_PIN PB2
+#define ALARM_OFF_BUTTON_PIN PB4
+#define INCREMENT_TIME_BUTTON_PIN PB5
+#define DECREMENT_TIME_BUTTON_PIN PB6
+#define WATER_PUMP_PIN PB3
+#define BUZZER_PIN PB1
 
-  // put your setup code here, to run once:
-  pinMode(LIGHT_PIN, OUTPUT);
-  
+#define INITIAL_HOURS_VAL 12
+#define INITIAL_MINS_VAL 30
+
+Button alarm_off_button(ALARM_SET_BUTTON_PIN);
+Button alarm_set_button(ALARM_OFF_BUTTON_PIN);
+Button increment_time_button(INCREMENT_TIME_BUTTON_PIN);
+Button decrement_time_button(DECREMENT_TIME_BUTTON_PIN);
+Time current_time(INITIAL_HOURS_VAL, INITIAL_MINS_VAL, &oled);
+Time alarm_time(INITIAL_HOURS_VAL, INITIAL_MINS_VAL-1, &oled);
+Time temp_time(INITIAL_HOURS_VAL, INITIAL_MINS_VAL, &oled);
+WaterPump water_pump(WATER_PUMP_PIN);
+Buzzer buzzer(BUZZER_PIN);
+
+
+
+void setup(){
+
+  Serial.begin(9600);  
+
+  alarm_off_button.init();
+  water_pump.init();
+  buzzer.init();
+  current_time.init();
+
+
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
 
-  fsm.update();
+void loop(){
+
+  Serial.print(current_time.get_formatted_time());
+
+  // current_time.show(current_time.get_formatted_time(), 0, 10);
+
+  if(current_time.equals(alarm_time)){
+
+    buzzer.turn_on();
+    water_pump.turn_on();
+
+  } else {
+
+    buzzer.turn_off();
+    water_pump.turn_off();
+
+  }
+
+  if(alarm_off_button.is_pressed()){
+
+    buzzer.turn_off();
+    water_pump.turn_off();
+
+  }
+
+  if(alarm_set_button.is_pressed()){
+
+    alarm_time.set_time(temp_time, alarm_set_button, increment_time_button, decrement_time_button);
+
+  }
+
   
-  delay(100);  // Small delay for stability
+  current_time.update();
+
 
 }

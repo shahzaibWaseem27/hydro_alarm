@@ -1,0 +1,52 @@
+
+
+
+FUNCTION MAIN
+
+
+
+	WHILE TRUE
+
+
+
+		oled.display(current_time, 0)
+		
+		
+		IF alarm_time.equals(current_time)
+
+
+			buzzer.on()
+			water_pump.on()
+
+		ELSE
+
+			buzzer.off()
+			water_pump.off()
+
+		END IF
+		
+		
+		IF alarm_off_button.pressed()
+
+			buzzer.off()
+			water_pump.off()			
+
+		END IF
+
+		
+		IF set_alarm_button.pressed()
+
+			alarm_time.set_time(oled)
+
+		END IF
+
+		
+		current_time.update()
+
+
+	END WHILE
+
+
+
+
+END FUNCTION
